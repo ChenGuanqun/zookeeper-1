@@ -250,6 +250,19 @@ public class ClientCnxn {
                         break;
                     }
                     if (event instanceof WatcherEvent) {
+                    	/**********************************Comment by Tao*****************************************************************
+                    	 * In the 0.0.1 version, we can only use the default watcher of zookeeper object to handle the event.
+                    	 * Take exists function as example, the function can only take boollen input to decide whether use
+                    	 * the default watcher.
+                    	 * 
+                    	 * However, in higher version of zookeeper, we can use watcher object for exists and other functions. zookeeper
+                    	 * solution a to implement this feature.
+                    	 * a.Zookeeper client user hashmap to manager all the watchers, when receive the notification of server,
+                    	 *   we can use the event properties to pick up the watchers to this event.
+                    	 * b.If the size of watcher class is small, we can send the class as bytes in the request. when receive the
+                    	 *   response, we can use reflection to create the watcher object and process the event. This solution is used
+                    	 *   in the event based Node.js.
+                    	 ************************************************/
                         zooKeeper.watcher.process((WatcherEvent) event);
                     } else {
                         Packet p = (Packet) event;
@@ -394,6 +407,13 @@ public class ClientCnxn {
                 return;
             }
             if (r.getXid() == -1) {
+            	/************************************************************************
+            	 * This is forwarding notification from zookeeper server. This notification
+            	 * may happen at any time. It may be triggered by other clients or server.
+            	 * 
+            	 * We can not assume that the notification happens as the sequence with the
+            	 * request sent to server. 
+            	 ************************************************************************/
                 // -1 means notification
                 WatcherEvent event = new WatcherEvent();
                 event.deserialize(bbia, "response");
@@ -406,6 +426,16 @@ public class ClientCnxn {
                 throw new IOException("Nothing in the queue, but got "
                         + r.getXid());
             }
+            
+            /*******************************************************************************
+             * The packet arrived always be response of the first element of the pengindQueue.
+             * Callback is kind like the result of the function call. 
+             *              
+             * This is the essential difference between watcher and callback. 
+             * We don't know when watcher event is arrived. 
+             * But we do know that callback event is arrived one by one  as the sequence 
+             * of the requests sent out. 
+             **********************************************************************************/
             Packet p = pendingQueue.remove();
             /*
              * Since requests are processed in order, we better get a response
