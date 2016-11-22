@@ -160,6 +160,10 @@ public class DataTree {
             cver++;
             parent.stat.setCversion(cver);
             DataNode child = new DataNode(parent, data, acl, stat);
+            /*
+             * 实际上并没有实现一个严格意义上的Tree,当前node只记录了他包含的所有字节点的名称,这样可以迅速地找到它的字节名称.
+             * 同时维护了一个map,将full path与node映射起来,可以通过full path快速找到该node
+             */
             parent.children.add(childName);
             nodes.put(path, child);
             if (ephemeralOwner != 0) {

@@ -238,7 +238,9 @@ public class ZooKeeperServer implements SessionExpirer {
         }
         return v.toArray(new File[0]);
     }
-    
+    /*
+     * load data from local file, which stored the data(session, data, states) when this is down last time
+     */
     public void loadData() throws IOException, FileNotFoundException,
             SyncFailedException, InterruptedException {
         long highestZxid = 0;
@@ -497,8 +499,12 @@ public class ZooKeeperServer implements SessionExpirer {
 
     public void startup() throws IOException, InterruptedException {
         if (dataTree == null) {
+        	//从磁盘读取数据,恢复上一次宕机时的状态
             loadData();
         }
+        /*
+         * 创建session管理，单独线程专门处理client端的session,如果超时需要将session设置为expired状态
+         */
         createSessionTracker();
         setupRequestProcessors();
         running = true;

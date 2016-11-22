@@ -119,6 +119,14 @@ public class LeaderElection {
         return result;
     }
 
+    /*
+     * 快速选举算法,将自己的sid,zxid分别发送给其他server。同时接收其他server发送过来的sid,zxid信息。
+     * 选取其中zxid最大的作为leader,如果相同选择sid大的。保证在相同条件下，所有server做出一致判断（具有相同的input）。
+     * 
+     * 这个方法并没有check在选举后，所有的server选出的leader是否一样，实际也不需要。只要半数通过就好，系统正常运行。
+     * 其他没有能够更新的server,会在连入主网（多数server互联的网）后发现自己commit的被拒绝，尝试重新选举此时更新到正确的leader。
+     * 或者其他server也有可能一直处在LEADING状态下循环。反正只要something is going wrong,都会回到LEADING状态。
+     */
     public Vote lookForLeader() throws InterruptedException {
         self.currentVote = new Vote(self.myid, self.getLastLoggedZxid());
         // We are going to look for a leader by casting a vote for ourself

@@ -137,6 +137,13 @@ public class NIOServerCnxn implements Watcher, ServerCnxn {
                         selected = selector.selectedKeys();
                     }
                     for (SelectionKey k : selected) {
+                    	/*
+                    	 * the readyOps returns an integer
+                    	 * 0001 means ready to read
+                    	 * 0010 means ready to write
+                    	 * 0100 means ready to connect
+                    	 * 1000 means ready to accept
+                    	 */
                         if ((k.readyOps() & SelectionKey.OP_ACCEPT) != 0) {
                             SocketChannel sc = ((ServerSocketChannel) k
                                     .channel()).accept();
@@ -269,12 +276,23 @@ public class NIOServerCnxn implements Watcher, ServerCnxn {
         }
     }
 
+    /*
+     * Read and write operations for server side.
+     */
     void doIO(SelectionKey k) throws InterruptedException {
         try {
             if (sock == null) {
                 return;
             }
             if (k.isReadable()) {
+            	/*
+            	 * For this first time, incomingBuffer == lenBuffer.
+            	 * server read 4 bytes from client, which tells server
+            	 * how many bytes the client is going to send.
+            	 * 
+            	 * 4个byte正好可以表示一个integer的大小
+            	 */
+            	
                 int rc = sock.read(incomingBuffer);
                 if (rc < 0) {
                     throw new IOException("Read error");
@@ -462,6 +480,9 @@ public class NIOServerCnxn implements Watcher, ServerCnxn {
 
     private void readLength(SelectionKey k) throws IOException {
         // Read the length, now get the buffer
+    	/*
+    	 * 下次需要发送数据的长度使用4byte表示，正好组成32bit的整数
+    	 */
         int len = lenBuffer.getInt();
         if (!initialized) {
             // We take advantage of the limited size of the length to look
@@ -599,6 +620,10 @@ public class NIOServerCnxn implements Watcher, ServerCnxn {
         if (zk == null) {
             throw new IOException("ZooKeeperServer not running");
         }
+        /*
+         * 重新调整incomingBuffer的大小为readLenght读到的长度
+         * 下次读取client发送过来的数据时，直接读取len个bytes的数据
+         */
         incomingBuffer = ByteBuffer.allocate(len);
     }
 
