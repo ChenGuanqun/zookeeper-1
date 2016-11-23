@@ -219,6 +219,9 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
                 parentRecord.childCount++;
                 parentRecord.stat
                         .setCversion(parentRecord.stat.getCversion() + 1);
+                /*
+                 * Make the change in states in memory
+                 */
                 addChangeRecord(parentRecord);
                 addChangeRecord(new ChangeRecord(txnHeader.getZxid(), path, s,
                         0, createRequest.getAcl()));
