@@ -163,10 +163,18 @@ public class Leader {
      */
     void lead() throws IOException, InterruptedException {
         self.tick = 0;
+        /******************************************************************************
+         * This is in LeaderZooKeeperServer handle request from client or other nodes.
+         * For example, leader receive update request from other nodes, and uses two phrase
+         * commit algorithm to update the date and keep the majority of cluster sync. 
+         ******************************************************************************/
         zk = new LeaderZooKeeperServer(self.getId(), self.dataDir,
                 self.dataLogDir, this);
         zk.loadData();
         zk.startup();
+        /*
+         * 64bit data contains two parts. [0-31] represents for zxid.
+         */
         long epoch = self.getLastLoggedZxid() >> 32L;
         epoch++;
         zk.setZxid(epoch << 32L);
@@ -179,6 +187,17 @@ public class Leader {
                     + newLeaderProposal.packet.getZxid());
         }
         outstandingProposals.add(newLeaderProposal);
+        
+        /********************************************************************************
+         * Create a new thread to accept connection from other followers. When received update
+         * request from others, leader submit the request to LeaderZooKeeperServer. The process
+         * chain will handle the request. 
+         * 
+         * For example: 
+         * 1.send proposals to other 
+         * 2.wait the majority of servers to  accept.
+         * 3.execute the request and commit the request to other nodes.
+         ********************************************************************************/
         new Thread() {
             public void run() {
                 try {
@@ -321,6 +340,10 @@ public class Leader {
                 p.ackCount++;
                 // ZooLog.logException(new RuntimeException(), "Count for " +
                 // Long.toHexString(zxid) + " is " + p.ackCount);
+                
+                /*****************************************************************
+                 * After send proposals to followers, we have to get ACKs of majority of server.
+                 ****************************************************************/
                 if (p.ackCount > self.quorumPeers.size() / 2) {
                     if (!first) {
                         ZooLog.logError("Commiting " + Long.toHexString(zxid)

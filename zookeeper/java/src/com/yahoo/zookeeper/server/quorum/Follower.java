@@ -124,6 +124,11 @@ public class Follower {
             sock.setSoTimeout(self.tickTime * self.initLimit);
             for (int tries = 0; tries < 3; tries++) {
                 try {
+                	/**************************************************************
+                	 * zookeeper server communicate with each other using BIO
+                	 * is it because the clusters of server is limited. Also we want to
+                	 * communicate each other fast.
+                	 *************************************************************/
                     sock.connect(addr, self.tickTime * self.syncLimit);
                     sock.setTcpNoDelay(true);
                     break;
